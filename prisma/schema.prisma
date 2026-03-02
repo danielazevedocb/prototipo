@@ -1,0 +1,65 @@
+generator client {
+  provider   = "prisma-client"
+  output     = "../src/generated/prisma"
+  engineType = "client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  CASHIER
+  SALES
+  STOCK
+}
+
+model Company {
+  id        String     @id @default(cuid())
+  name      String     @db.VarChar(120)
+  slug      String?    @unique @db.VarChar(80)
+  active    Boolean    @default(true)
+  users     User[]
+  auditLogs AuditLog[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([active])
+}
+
+model User {
+  id           String      @id @default(cuid())
+  username     String      @unique @db.VarChar(50)
+  name         String?     @db.VarChar(120)
+  passwordHash String      @db.VarChar(255)
+  role         UserRole    @default(CASHIER)
+  active       Boolean     @default(true)
+  companyId    String?
+  company      Company?    @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  auditLogs    AuditLog[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([companyId])
+  @@index([active, role])
+}
+
+model AuditLog {
+  id        String    @id @default(cuid())
+  userId    String?
+  companyId String?
+  action    String    @db.VarChar(100)
+  entity    String    @db.VarChar(100)
+  entityId  String    @db.VarChar(100)
+  metadata  Json?
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  company   Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([companyId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
